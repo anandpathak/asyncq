@@ -10,7 +10,7 @@ import (
 type Queue struct {
 	// Retry represent the number of time each `Job` in the `Queue` will be retried, if the `Job` fails
 	Retry int
-	// BufferSize is the maximum `Job` that can pe processed at a time.
+	// BufferSize is the maximum `Job` that can be in queue for processing .
 	BufferSize int
 	// Func accept a method of Processor type, this method is performed on each Job.
 	Func Processor
