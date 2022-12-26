@@ -6,17 +6,23 @@ import (
 	"time"
 )
 
+// Queue is a structure represent async event Processor.
 type Queue struct {
-	Retry      int
+	// Retry represent the number of time each `Job` in the `Queue` will be retried, if the `Job` fails
+	Retry int
+	// BufferSize is the maximum `Job` that can pe processed at a time.
 	BufferSize int
-	Func       Processor
-	once       sync.Once
+	// Func accept a method of Processor type, this method is performed on each Job.
+	Func Processor
+	once sync.Once
+	// RetryDelay represent the delay between Job retries. Currently, Queue Only support linear `Retry` Delay
 	RetryDelay time.Duration
 	closed     bool
 	pool       *workerPool
 	sync.Mutex
 }
 
+// New returns a async queue instance
 func New(retry int, bufferSize int, poolSize int, delay time.Duration, processor Processor) *Queue {
 	queue := &Queue{
 		Retry:      retry,
@@ -29,10 +35,14 @@ func New(retry int, bufferSize int, poolSize int, delay time.Duration, processor
 	return queue
 }
 
+// Start initiate the Queue processor, It will allow Queue to accept `Job`
+// Job can only be added to Queue Once Start is triggered
 func (q *Queue) Start() {
 	q.pool.start(q)
 }
 
+// Add adds a Job to the Queue for processing
+// Once the Queue is closed Add to the Queue will not be allowed
 func (q *Queue) Add(j *Job) error {
 	q.Lock()
 	defer q.Unlock()
@@ -59,13 +69,13 @@ func (q *Queue) reQueue(j *Job) {
 	}
 }
 
+// Close the queue process so that no new message will get processed
 func (q *Queue) Close() {
 	q.once.Do(func() {
 		q.Mutex.Lock()
 		defer q.Mutex.Unlock()
 		q.closed = true
 		q.pool.closeWorkers()
-
 		log.Info("[async] closing the queue worker")
 	})
 }

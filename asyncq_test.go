@@ -3,11 +3,12 @@ package asyncq
 import (
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/suite"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
 type Suite struct {
@@ -22,7 +23,7 @@ func TestSuite(t *testing.T) {
 }
 
 func (s *Suite) TestQueueSingleMessage() {
-	mockJobProcess := &MockJobProcess{
+	mockJobProcess := &mockJobProcess{
 		waitGroup: &sync.WaitGroup{},
 	}
 	q := New(2, 3, 1, 1*time.Second, mockJobProcess)
@@ -32,13 +33,15 @@ func (s *Suite) TestQueueSingleMessage() {
 	}
 	mockJobProcess.waitGroup.Add(1)
 	mockJobProcess.On("Process", job).Return(nil)
-	assert.Equal(s.T(), nil, q.Add(job))
-	q.Close()
+	expectedErr := q.Add(job)
+	defer q.Close()
+	assert.Equal(s.T(), nil, expectedErr)
 	mockJobProcess.waitGroup.Wait()
+
 }
 
 func (s *Suite) TestShouldReturnErrorWhenChannelClosed() {
-	mockJobProcess := &MockJobProcess{
+	mockJobProcess := &mockJobProcess{
 		waitGroup: &sync.WaitGroup{},
 	}
 	q := New(2, 2, 1, 3*time.Second, mockJobProcess)
@@ -49,10 +52,11 @@ func (s *Suite) TestShouldReturnErrorWhenChannelClosed() {
 	q.Close()
 	mockJobProcess.AssertNotCalled(s.T(), "Process", job)
 	assert.Error(s.T(), q.Add(job))
+	defer q.Close()
 	mockJobProcess.waitGroup.Wait()
 }
 func (s *Suite) TestShouldProcessInBatchWhenQueueFull() {
-	mockJobProcess := &MockJobProcess{
+	mockJobProcess := &mockJobProcess{
 		waitGroup: &sync.WaitGroup{},
 		delay:     1 * time.Second,
 	}
@@ -75,7 +79,7 @@ func (s *Suite) TestShouldProcessInBatchWhenQueueFull() {
 }
 
 func (s *Suite) TestShouldRetryWhenProcessFails() {
-	mockJobProcess := &MockJobProcess{
+	mockJobProcess := &mockJobProcess{
 		waitGroup: &sync.WaitGroup{},
 		delay:     1 * time.Second,
 	}
